@@ -19,7 +19,7 @@ class User(
     var image: String? = null,
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id: Long? = null,
+    var id: Long = 0,
 ): AuthenticatedPrincipal {
     override fun getName(): String {
         return id.toString()

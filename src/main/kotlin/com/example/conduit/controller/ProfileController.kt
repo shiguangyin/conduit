@@ -1,10 +1,11 @@
 package com.example.conduit.controller
 
+import com.example.conduit.constants.RelationType
 import com.example.conduit.dto.ProfileDTO
 import com.example.conduit.exception.ResourceNotFoundException
-import com.example.conduit.model.FollowRelation
+import com.example.conduit.model.Relation
 import com.example.conduit.model.User
-import com.example.conduit.repository.FollowRepository
+import com.example.conduit.repository.RelationRepository
 import com.example.conduit.repository.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/profiles/{username}")
 class ProfileController @Autowired constructor(
     private val userRepository: UserRepository,
-    private val followRepository: FollowRepository,
+    private val followRepository: RelationRepository,
 
     ) {
 
@@ -34,9 +35,7 @@ class ProfileController @Autowired constructor(
         val user = userRepository.findUserByUsername(username) ?: throw ResourceNotFoundException()
         var following = false
         currentUser?.id?.let { currentUserId ->
-            followRepository.findFollowRelationByUserIdAndTargetUser(currentUserId, user.id!!)?.let {
-                following = true
-            }
+            following = followRepository.existsByFromAndToAndType(currentUserId, user.id, RelationType.Follow)
         }
 
         val dto = ProfileDTO(
@@ -54,10 +53,10 @@ class ProfileController @Autowired constructor(
         @AuthenticationPrincipal currentUser: User
     ): ResponseEntity<Any> {
         val user = userRepository.findUserByUsername(username) ?: throw ResourceNotFoundException()
-        val currentUserId = currentUser.id ?: throw ResourceNotFoundException()
-        var relation = followRepository.findFollowRelationByUserId(currentUserId)
-        if (relation == null) {
-            relation = FollowRelation(currentUserId, user.id!!)
+        val currentUserId = currentUser.id
+        val followed = followRepository.existsByFromAndToAndType(currentUserId, user.id, RelationType.Follow)
+        if (!followed) {
+            val relation = Relation(currentUserId, user.id, RelationType.Follow)
             followRepository.save(relation)
         }
         val dto = ProfileDTO(
@@ -76,8 +75,8 @@ class ProfileController @Autowired constructor(
         @AuthenticationPrincipal currentUser: User,
     ): ResponseEntity<Any> {
         val user = userRepository.findUserByUsername(username) ?: throw ResourceNotFoundException()
-        val currentUserId = currentUser.id ?: throw ResourceNotFoundException()
-        val rows = followRepository.deleteByUserIdAndTargetUser(currentUserId, user.id!!)
+        val currentUserId = currentUser.id
+        val rows = followRepository.deleteByFromAndToAndType(currentUserId, user.id, RelationType.Follow)
         logger.info("delete rows : $rows")
         logger
         val dto = ProfileDTO(

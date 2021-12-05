@@ -5,7 +5,6 @@ import com.example.conduit.service.JwtService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import javax.servlet.FilterChain
@@ -17,7 +16,7 @@ import javax.servlet.http.HttpServletResponse
  * @date 2021/12/5
  */
 @Component
-class JwtFilter @Autowired constructor(
+class JwtRequestFilter @Autowired constructor(
     private val jwtService: JwtService,
     private val userRepository: UserRepository,
 ): OncePerRequestFilter() {

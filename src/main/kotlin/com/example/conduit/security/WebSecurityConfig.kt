@@ -11,7 +11,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-import java.util.*
 
 /**
  * @author masker
@@ -20,20 +19,37 @@ import java.util.*
 @Configuration
 @EnableWebSecurity
 class WebSecurityConfig @Autowired constructor(
-    private val filter: JwtFilter
+    private val filter: JwtRequestFilter
 ) : WebSecurityConfigurerAdapter() {
     override fun configure(http: HttpSecurity) {
-        // disable csrf to avoid 403
-        http.csrf().disable()
+        // enable cors and disable csrf to avoid 403
+        http.cors().and().csrf().disable()
         http.authorizeRequests()
             .antMatchers("/api/users", "/api/users/login")
             .permitAll()
             .antMatchers(HttpMethod.GET, "/api/profiles/**")
+            .permitAll()
+            .antMatchers(HttpMethod.GET, "/api/articles/**")
+            .permitAll()
+            .antMatchers(HttpMethod.GET, "/api/tags")
             .permitAll()
             .anyRequest()
             .authenticated()
         http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter::class.java)
     }
 
+
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource? {
+        val configuration = CorsConfiguration()
+        configuration.allowedOrigins = listOf("*")
+        configuration.allowedMethods =
+            listOf("HEAD", "GET", "POST", "PUT", "DELETE", "PATCH")
+        configuration.allowCredentials = false
+        configuration.allowedHeaders = listOf("Authorization", "Cache-Control", "Content-Type")
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", configuration)
+        return source
+    }
 
 }
