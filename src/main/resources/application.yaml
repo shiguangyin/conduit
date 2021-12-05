@@ -4,3 +4,13 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: root
+  jackson:
+    deserialization:
+      UNWRAP_ROOT_VALUE: true #unwrap root value @JsonRootName
+
+
+logging:
+  level:
+    org:
+      springframework:
+        security: debug
