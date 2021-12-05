@@ -3,6 +3,7 @@ package com.example.conduit.security
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
@@ -20,15 +21,17 @@ import java.util.*
 @EnableWebSecurity
 class WebSecurityConfig @Autowired constructor(
     private val filter: JwtFilter
-): WebSecurityConfigurerAdapter() {
+) : WebSecurityConfigurerAdapter() {
     override fun configure(http: HttpSecurity) {
         // disable csrf to avoid 403
         http.csrf().disable()
         http.authorizeRequests()
-                .antMatchers("/api/users", "/api/users/login")
-                .permitAll()
-                .anyRequest()
-                .authenticated()
+            .antMatchers("/api/users", "/api/users/login")
+            .permitAll()
+            .antMatchers(HttpMethod.GET, "/api/profiles/**")
+            .permitAll()
+            .anyRequest()
+            .authenticated()
         http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter::class.java)
     }
 
