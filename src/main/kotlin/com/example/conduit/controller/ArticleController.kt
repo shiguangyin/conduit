@@ -18,6 +18,7 @@ import com.example.conduit.repository.ArticleRepository
 import com.example.conduit.repository.RelationRepository
 import com.example.conduit.repository.UserRepository
 import com.example.conduit.service.ArticleService
+import com.example.conduit.service.RelationService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.Cacheable
@@ -40,7 +41,7 @@ class ArticleController @Autowired constructor(
     private val articleRepository: ArticleRepository,
     private val userRepository: UserRepository,
     private val articleService: ArticleService,
-    private val relationRepository: RelationRepository,
+    private val relationService: RelationService,
 ) {
 
     private val logger = LoggerFactory.getLogger(ArticleController::class.java)
@@ -170,10 +171,9 @@ class ArticleController @Autowired constructor(
     ): ResponseEntity<Any> {
         val article = articleRepository.findBySlug(slug) ?: throw ResourceNotFoundException()
         val author = userRepository.findById(article.author).orElseThrow { ResourceNotFoundException() }
-        val favorited = relationRepository.existsByFromAndToAndType(user.id, article.id, RelationType.ArticleFavorite)
+        val favorited = relationService.exist(user.id, article.id, RelationType.ArticleFavorite)
         if (!favorited) {
-            val relation = Relation(user.id, article.author, RelationType.ArticleFavorite)
-            relationRepository.save(relation)
+            relationService.addRelation(user.id, article.id, RelationType.ArticleFavorite)
         }
         val dto = ArticleDTO.build(article, author, true, 1)
         return ResponseEntity.ok(mapOf("article" to dto))
@@ -186,7 +186,7 @@ class ArticleController @Autowired constructor(
     ): ResponseEntity<Any> {
         val article = articleRepository.findBySlug(slug) ?: throw ResourceNotFoundException()
         val author = userRepository.findById(article.author).orElseThrow { ResourceNotFoundException() }
-        val rows = relationRepository.deleteByFromAndToAndType(user.id, article.author, RelationType.ArticleFavorite)
+        val rows = relationService.deleteRelation(user.id, article.author, RelationType.ArticleFavorite)
         logger.info("unFavorite delete rows : $rows")
         val dto = ArticleDTO.build(article, author, false, 0)
         return ResponseEntity.ok(mapOf("article" to dto))
