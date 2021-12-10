@@ -1,5 +1,7 @@
 package com.example.conduit.model
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.security.core.AuthenticatedPrincipal
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
@@ -11,6 +13,8 @@ import javax.persistence.Id
  * @date 2021/12/5
  */
 @Entity(name = "user")
+@Cacheable
+@JsonIgnoreProperties(ignoreUnknown = true)
 class User(
     var username: String,
     var email: String,

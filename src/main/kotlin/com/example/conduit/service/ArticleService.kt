@@ -1,6 +1,6 @@
 package com.example.conduit.service
 
-import com.example.conduit.dto.ArticleDTO
+import com.example.conduit.model.Article
 
 /**
  * @author masker
@@ -8,6 +8,6 @@ import com.example.conduit.dto.ArticleDTO
  */
 interface ArticleService {
 
-    fun findArticleBySlug(slug: String): ArticleDTO
+    fun findArticleBySlug(slug: String): Article
 
 }

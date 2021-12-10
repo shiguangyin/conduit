@@ -1,7 +1,7 @@
 package com.example.conduit.security
 
-import com.example.conduit.repository.UserRepository
 import com.example.conduit.service.JwtService
+import com.example.conduit.service.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
@@ -18,7 +18,7 @@ import javax.servlet.http.HttpServletResponse
 @Component
 class JwtRequestFilter @Autowired constructor(
     private val jwtService: JwtService,
-    private val userRepository: UserRepository,
+    private val userService: UserService,
 ): OncePerRequestFilter() {
 
     companion object {
@@ -29,8 +29,7 @@ class JwtRequestFilter @Autowired constructor(
         getTokenFromHeader(request)?.let { token ->
             val sub = jwtService.getSubjectFromToken(token)
             if (sub?.isNotEmpty() == true) {
-                userRepository.findById(sub.toLong()).ifPresent{ user ->
-                    logger.info("parsed user : $user")
+                userService.findUserById(sub.toLong())?.let{ user ->
                     val token = UsernamePasswordAuthenticationToken(user, null, emptyList())
                     //token.details = WebAuthenticationDetailsSource().buildDetails(request)
                     SecurityContextHolder.getContext().authentication = token

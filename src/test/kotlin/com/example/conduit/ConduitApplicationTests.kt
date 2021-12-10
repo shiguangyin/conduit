@@ -2,16 +2,21 @@ package com.example.conduit
 
 import com.example.conduit.dto.ArticleDTO
 import com.example.conduit.dto.UserDTO
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.data.redis.core.RedisTemplate
+import java.time.Duration
+import javax.annotation.Resource
 
 @SpringBootTest
 class ConduitApplicationTests {
 
+
+    @Resource
+    private lateinit var redisTemplate: RedisTemplate<String, ArticleDTO>
+
     @Test
-    fun testDTO2Json() {
+    fun testRedisSerialize() {
         val userDTO = UserDTO(
             "xxx",
             "yyy",
@@ -25,13 +30,13 @@ class ConduitApplicationTests {
             "body",
             "create",
             "update",
-            userDTO
+            userDTO,
+            false,
+            0
         )
-        val mapper = ObjectMapper().registerKotlinModule()
-        val str = mapper.writeValueAsString(articleDTO)
-        println(str)
-        val dto2 = mapper.readValue(str, ArticleDTO::class.java)
-        println(dto2)
+        redisTemplate.opsForValue().set("test", articleDTO, Duration.ofSeconds(3))
+        val ret = redisTemplate.opsForValue().get("test")
+        println(ret)
     }
 
 }

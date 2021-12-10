@@ -2,11 +2,10 @@ package com.example.conduit.model
 
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
-import org.springframework.data.annotation.CreatedDate
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.*
 import javax.persistence.*
 
 /**
@@ -14,6 +13,7 @@ import javax.persistence.*
  * @date 2021/12/5
  */
 @Entity(name = "article")
+@Cacheable
 @EntityListeners(AuditingEntityListener::class)
 class Article(
     var title: String,

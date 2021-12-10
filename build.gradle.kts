@@ -8,6 +8,14 @@ plugins {
     id("org.jetbrains.kotlin.plugin.jpa") version "1.6.0"
 }
 
+noArg {
+    annotation("com.example.conduit.annotation.CacheableEntity")
+}
+
+allOpen {
+    annotation("com.example.conduit.annotation.CacheableEntity")
+}
+
 group = "com.conduit"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
