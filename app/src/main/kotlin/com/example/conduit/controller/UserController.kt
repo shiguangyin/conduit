@@ -35,9 +35,11 @@ class UserController @Autowired constructor(
         if (user.password != params.password) {
             throw InvalidAuthenticationException()
         }
-        val token = jwtService.generateToken(user)
-        val dto = UserWithTokenDTO(user.email, user.username, user.bio,
-            token, user.image)
+        val token = jwtService.generateToken(user.id.toString())
+        val dto = UserWithTokenDTO(
+            user.email, user.username, user.bio,
+            token, user.image
+        )
         return ResponseEntity.ok(mapOf("user" to dto))
     }
 
@@ -45,7 +47,7 @@ class UserController @Autowired constructor(
     fun register(@RequestBody params: RegisterParams): ResponseEntity<Any> {
         val user = User(params.username, params.email, params.password)
         repo.save(user)
-        val token = jwtService.generateToken(user)
+        val token = jwtService.generateToken(user.id.toString())
         val userDto = UserWithTokenDTO(
             user.email, user.username,
             user.bio, token
@@ -65,8 +67,10 @@ class UserController @Autowired constructor(
         params.bio?.apply { user.bio = this }
         user.image = params.image
         repo.save(user)
-        val dto = UserDTO(user.email, user.username, user.bio,
-            user.image)
+        val dto = UserDTO(
+            user.email, user.username, user.bio,
+            user.image
+        )
         return ResponseEntity.ok(mapOf("user" to dto))
     }
 
