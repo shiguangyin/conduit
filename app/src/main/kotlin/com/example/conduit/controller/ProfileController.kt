@@ -65,7 +65,7 @@ class ProfileController @Autowired constructor(
             true,
             user.image,
         )
-        return ResponseEntity.ok("profile" to dto)
+        return ResponseEntity.ok(mapOf("profile" to dto))
     }
 
 
@@ -85,7 +85,7 @@ class ProfileController @Autowired constructor(
             false,
             user.image,
         )
-        return ResponseEntity.ok("profile" to dto)
+        return ResponseEntity.ok(mapOf("profile" to dto))
     }
 
 }

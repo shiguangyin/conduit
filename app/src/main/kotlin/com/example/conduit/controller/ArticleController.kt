@@ -1,5 +1,6 @@
 package com.example.conduit.controller
 
+import com.example.conduit.constants.CommentType
 import com.example.conduit.constants.RelationType
 import com.example.conduit.dto.ArticleDTO
 import com.example.conduit.dto.CommentDTO
@@ -10,11 +11,13 @@ import com.example.conduit.extension.format
 import com.example.conduit.model.Article
 import com.example.conduit.model.User
 import com.example.conduit.model.toSlug
+import com.example.conduit.param.AddCommentParams
 import com.example.conduit.param.CreateArticleParams
 import com.example.conduit.param.ListArticlesParams
 import com.example.conduit.param.UpdateArticleParams
 import com.example.conduit.repository.ArticleRepository
 import com.example.conduit.service.ArticleService
+import com.example.conduit.service.CommentService
 import com.example.conduit.service.RelationService
 import com.example.conduit.service.UserService
 import org.slf4j.LoggerFactory
@@ -38,6 +41,7 @@ class ArticleController @Autowired constructor(
     private val articleService: ArticleService,
     private val relationService: RelationService,
     private val userService: UserService,
+    private val commentService: CommentService,
 ) {
 
     private val logger = LoggerFactory.getLogger(ArticleController::class.java)
@@ -148,17 +152,53 @@ class ArticleController @Autowired constructor(
     @GetMapping("/{slug}/comments")
     fun getArticleComments(@PathVariable("slug") slug: String): ResponseEntity<Any> {
         val article = articleService.findArticleBySlug(slug) ?: throw ResourceNotFoundException()
-        val author = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
-        val comment = CommentDTO(
-            0,
-            article.createdAt.format(),
-            article.updatedAt.format(),
-            article.body,
-            ProfileDTO(author.username, author.bio, false, author.image)
-        )
-        val dto = listOf(comment)
+        val comments = commentService.getCommentsByObject(article.id, CommentType.Article)
+        val dto = comments.map { comment ->
+            val user = userService.findUserById(comment.author) ?: throw ResourceNotFoundException()
+            CommentDTO(
+                comment.id,
+                comment.createdAt.format(),
+                comment.updatedAt.format(),
+                comment.body,
+                // TODO following
+                ProfileDTO(user.username, user.bio, false, user.image)
+            )
+        }
         return ResponseEntity.ok(mapOf("comments" to dto))
     }
+
+    @PostMapping("/{slug}/comments")
+    fun addArticleComment(
+        @PathVariable("slug") slug: String,
+        @RequestBody params: AddCommentParams,
+        @AuthenticationPrincipal user: User,
+    ): ResponseEntity<Any> {
+        val article = articleService.findArticleBySlug(slug)
+        val comment = commentService.addComment(article.id, CommentType.Article, params, user.id)
+        val dto = CommentDTO(
+            comment.id,
+            comment.createdAt.format(),
+            comment.updatedAt.format(),
+            comment.body,
+            ProfileDTO(user.username, user.bio, false, user.image)
+        )
+        return ResponseEntity.ok(mapOf("comment" to dto))
+    }
+
+    @DeleteMapping("/{slug}/comments/{id}")
+    fun deleteComment(
+        @PathVariable("slug") slug: String,
+        @PathVariable("id") id: Long,
+        @AuthenticationPrincipal user: User
+    ): ResponseEntity<Any> {
+        val comment = commentService.findCommentById(id) ?: throw ResourceNotFoundException()
+        if (comment.author != user.id) {
+            throw InvalidAuthenticationException()
+        }
+        commentService.deleteById(comment.id)
+        return ResponseEntity.ok(null)
+    }
+
 
     @PostMapping("/{slug}/favorite")
     fun favoriteArticle(
