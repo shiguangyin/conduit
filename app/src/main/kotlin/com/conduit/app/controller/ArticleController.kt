@@ -10,7 +10,6 @@ import com.conduit.app.exception.ResourceNotFoundException
 import com.conduit.app.extension.format
 import com.conduit.app.model.Article
 import com.conduit.app.model.User
-import com.conduit.app.model.toSlug
 import com.conduit.app.param.AddCommentParams
 import com.conduit.app.param.CreateArticleParams
 import com.conduit.app.param.ListArticlesParams
@@ -22,7 +21,6 @@ import com.conduit.app.service.RelationService
 import com.conduit.app.service.UserService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.http.ResponseEntity
@@ -48,35 +46,25 @@ class ArticleController @Autowired constructor(
 
     @PostMapping("")
     fun createArticle(
-        @AuthenticationPrincipal user: User,
-        @RequestBody params: CreateArticleParams
+        @AuthenticationPrincipal user: User, @RequestBody params: CreateArticleParams
     ): ResponseEntity<Any> {
-        val article = Article(
-            params.title,
-            params.description,
-            params.body,
-            author = user.id,
-        )
-        try {
-            articleRepository.save(article)
-        } catch (e: DataIntegrityViolationException) {
-            article.rebuildSlug()
-            articleRepository.save(article)
-        }
+        val article = articleService.createArticle(user.id, params)
         val dto = ArticleDTO.build(article, user)
         return ResponseEntity.ok(mapOf("article" to dto))
     }
 
     @GetMapping("/{slug}")
     fun getArticleBySlug(@PathVariable("slug") slug: String): ResponseEntity<Any> {
-        val article = articleService.findArticleBySlug(slug)
+        val article = articleService.findArticleBySlug(slug) ?: throw ResourceNotFoundException()
         val user = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
         val dto = ArticleDTO.build(article, user, false, 0)
         return ResponseEntity.ok(mapOf("article" to dto))
     }
 
     @GetMapping("")
-    fun listArticles(params: ListArticlesParams): ResponseEntity<Any> {
+    fun listArticles(
+        params: ListArticlesParams, @AuthenticationPrincipal user: User?
+    ): ResponseEntity<Any> {
         logger.info("params : $params")
         val userId = params.author?.let { authorName ->
             val author = userService.findUserByUsername(authorName) ?: throw ResourceNotFoundException()
@@ -93,8 +81,12 @@ class ArticleController @Autowired constructor(
         val pageable = PageRequest.of(params.offset, params.limit)
         val articleResult = articleRepository.findAll(spec, pageable)
         val dto = articleResult.content.map { article ->
-            val user = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
-            ArticleDTO.build(article, user)
+            val author = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
+            val favoritesCount = relationService.getRelationReverseCount(article.id, RelationType.ArticleFavorite)
+            val favorited = user?.let { it ->
+                relationService.exist(it.id, article.id, RelationType.ArticleFavorite)
+            } ?: false
+            ArticleDTO.build(article, author, favorited, favoritesCount)
         }
         return ResponseEntity.ok(mapOf("articles" to dto))
     }
@@ -102,15 +94,20 @@ class ArticleController @Autowired constructor(
     @GetMapping("/feed")
     fun getArticleFeed(
         @RequestParam("limit", required = false, defaultValue = "10") limit: Int,
-        @RequestParam("offset", required = false, defaultValue = "0") offset: Int
+        @RequestParam("offset", required = false, defaultValue = "0") offset: Int,
+        @AuthenticationPrincipal user: User?,
     ): ResponseEntity<Any> {
         logger.info("limit : $limit, offset : $offset")
         // TODO fix offset
         val pageable = PageRequest.of(offset, limit)
         val articleResult = articleRepository.findAll(pageable)
         val dto = articleResult.content.map { article ->
-            val user = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
-            ArticleDTO.build(article, user)
+            val author = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
+            val favoritesCount = relationService.getRelationReverseCount(article.id, RelationType.ArticleFavorite)
+            val favorited = user?.let { it ->
+                relationService.exist(it.id, article.id, RelationType.ArticleFavorite)
+            } ?: false
+            ArticleDTO.build(article, author, favorited, favoritesCount)
         }
         return ResponseEntity.ok(mapOf("articles" to dto))
     }
@@ -125,27 +122,20 @@ class ArticleController @Autowired constructor(
         if (user.id != article.author) {
             throw InvalidAuthenticationException()
         }
-        params.title?.let {
-            article.title = it
-            article.slug = toSlug(it)
-        }
-        params.body?.let { article.body = it }
-        params.description?.let { article.description = it }
-        articleRepository.save(article)
-        val dto = ArticleDTO.build(article, user)
+        val newArticle = articleService.updateArticle(article.id, params) ?: throw ResourceNotFoundException()
+        val dto = ArticleDTO.build(newArticle, user)
         return ResponseEntity.ok(mapOf("article" to dto))
     }
 
     @DeleteMapping("/{slug}")
     fun deleteArticle(
-        @PathVariable("slug") slug: String,
-        @AuthenticationPrincipal user: User
+        @PathVariable("slug") slug: String, @AuthenticationPrincipal user: User
     ): ResponseEntity<Any> {
         val article = articleService.findArticleBySlug(slug) ?: throw ResourceNotFoundException()
         if (user.id != article.author) {
             throw InvalidAuthenticationException()
         }
-        articleRepository.delete(article)
+        articleService.deleteArticle(article.id)
         return ResponseEntity.ok(null)
     }
 
@@ -156,10 +146,7 @@ class ArticleController @Autowired constructor(
         val dto = comments.map { comment ->
             val user = userService.findUserById(comment.author) ?: throw ResourceNotFoundException()
             CommentDTO(
-                comment.id,
-                comment.createdAt.format(),
-                comment.updatedAt.format(),
-                comment.body,
+                comment.id, comment.createdAt.format(), comment.updatedAt.format(), comment.body,
                 // TODO following
                 ProfileDTO(user.username, user.bio, false, user.image)
             )
@@ -173,7 +160,7 @@ class ArticleController @Autowired constructor(
         @RequestBody params: AddCommentParams,
         @AuthenticationPrincipal user: User,
     ): ResponseEntity<Any> {
-        val article = articleService.findArticleBySlug(slug)
+        val article = articleService.findArticleBySlug(slug) ?: throw ResourceNotFoundException()
         val comment = commentService.addComment(article.id, CommentType.Article, params, user.id)
         val dto = CommentDTO(
             comment.id,
@@ -187,9 +174,7 @@ class ArticleController @Autowired constructor(
 
     @DeleteMapping("/{slug}/comments/{id}")
     fun deleteComment(
-        @PathVariable("slug") slug: String,
-        @PathVariable("id") id: Long,
-        @AuthenticationPrincipal user: User
+        @PathVariable("slug") slug: String, @PathVariable("id") id: Long, @AuthenticationPrincipal user: User
     ): ResponseEntity<Any> {
         val comment = commentService.findCommentById(id) ?: throw ResourceNotFoundException()
         if (comment.author != user.id) {
@@ -202,8 +187,7 @@ class ArticleController @Autowired constructor(
 
     @PostMapping("/{slug}/favorite")
     fun favoriteArticle(
-        @PathVariable("slug") slug: String,
-        @AuthenticationPrincipal user: User
+        @PathVariable("slug") slug: String, @AuthenticationPrincipal user: User
     ): ResponseEntity<Any> {
         val article = articleService.findArticleBySlug(slug) ?: throw ResourceNotFoundException()
         val author = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
@@ -211,20 +195,21 @@ class ArticleController @Autowired constructor(
         if (!favorited) {
             relationService.addRelation(user.id, article.id, RelationType.ArticleFavorite)
         }
-        val dto = ArticleDTO.build(article, author, true, 1)
+        val favoritesCount = relationService.getRelationReverseCount(article.id, RelationType.ArticleFavorite)
+        val dto = ArticleDTO.build(article, author, true, favoritesCount)
         return ResponseEntity.ok(mapOf("article" to dto))
     }
 
     @DeleteMapping("/{slug}/favorite")
     fun unFavoriteArticle(
-        @PathVariable("slug") slug: String,
-        @AuthenticationPrincipal user: User
+        @PathVariable("slug") slug: String, @AuthenticationPrincipal user: User
     ): ResponseEntity<Any> {
         val article = articleService.findArticleBySlug(slug) ?: throw ResourceNotFoundException()
         val author = userService.findUserById(article.author) ?: throw ResourceNotFoundException()
-        val rows = relationService.deleteRelation(user.id, article.author, RelationType.ArticleFavorite)
+        val rows = relationService.deleteRelation(user.id, article.id, RelationType.ArticleFavorite)
         logger.info("unFavorite delete rows : $rows")
-        val dto = ArticleDTO.build(article, author, false, 0)
+        val favoritesCount = relationService.getRelationReverseCount(article.id, RelationType.ArticleFavorite)
+        val dto = ArticleDTO.build(article, author, false, favoritesCount)
         return ResponseEntity.ok(mapOf("article" to dto))
     }
 

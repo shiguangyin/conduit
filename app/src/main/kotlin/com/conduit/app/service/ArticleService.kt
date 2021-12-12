@@ -1,6 +1,8 @@
 package com.conduit.app.service
 
 import com.conduit.app.model.Article
+import com.conduit.app.param.CreateArticleParams
+import com.conduit.app.param.UpdateArticleParams
 
 /**
  * @author masker
@@ -8,6 +10,12 @@ import com.conduit.app.model.Article
  */
 interface ArticleService {
 
-    fun findArticleBySlug(slug: String): Article
+    fun createArticle(author: Long, params: CreateArticleParams): Article
+
+    fun findArticleBySlug(slug: String): Article?
+
+    fun updateArticle(id: Long, params: UpdateArticleParams): Article?
+
+    fun deleteArticle(id: Long)
 
 }

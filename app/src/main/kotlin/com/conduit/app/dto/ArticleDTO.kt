@@ -17,11 +17,11 @@ data class ArticleDTO(
     val updatedAt: String,
     val author: UserDTO,
     val favorited: Boolean,
-    val favoritesCount: Int,
+    val favoritesCount: Long,
     val tagList: List<String> = arrayListOf() // TODO
 ) {
     companion object {
-        fun build(article: Article, user: User, favorited: Boolean = false, favoritesCount: Int = 0): ArticleDTO {
+        fun build(article: Article, user: User, favorited: Boolean = false, favoritesCount: Long = 0): ArticleDTO {
             return ArticleDTO(
                 article.slug,
                 article.title,

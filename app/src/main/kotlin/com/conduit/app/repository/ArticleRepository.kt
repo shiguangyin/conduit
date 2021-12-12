@@ -1,6 +1,7 @@
 package com.conduit.app.repository
 
 import com.conduit.app.model.Article
+import com.conduit.app.param.CreateArticleParams
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.repository.PagingAndSortingRepository
 
