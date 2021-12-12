@@ -8,6 +8,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation ("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.+")
     implementation("org.springframework.kafka:spring-kafka")
+    implementation("net.devh:grpc-client-spring-boot-starter:2.13.0.RELEASE")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")

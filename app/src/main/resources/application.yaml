@@ -20,3 +20,9 @@ logging:
       springframework:
         security: info
         cache: info
+
+grpc:
+  client:
+    user_service:
+      address: static://localhost:8888
+      negotiationType: PLAINTEXT # disable TLS
