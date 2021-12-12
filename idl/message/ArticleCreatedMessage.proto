@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option java_package = "com.conduit.pb_gen.message";
+option java_multiple_files = true;
+
+message ArticleCreatedMessage {
+  int64 article_id = 1;
+  string title = 2;
+}

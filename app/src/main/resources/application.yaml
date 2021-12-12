@@ -9,6 +9,10 @@ spring:
       UNWRAP_ROOT_VALUE: true #unwrap root value @JsonRootName
   jpa:
     show-sql: true
+  kafka:
+    producer:
+      retries: 1
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
 
 logging:
   level:
