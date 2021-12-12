@@ -28,10 +28,10 @@ subprojects {
     }
 
 //    configure<NoArgExtension> {
-//        annotation("com.example.conduit.annotation.CacheableEntity")
+//        annotation("com.conduit.app.annotation.CacheableEntity")
 //    }
 //    configure<AllOpenExtension> {
-//        annotation("com.example.conduit.annotation.CacheableEntity")
+//        annotation("com.conduit.app.annotation.CacheableEntity")
 //    }
 
 }
